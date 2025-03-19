@@ -1,0 +1,9 @@
+[submodule "ZSeeker"]
+	path = ZSeeker
+	url = https://github.com/Georgakopoulos-Soares-lab/ZSeeker.git
+[submodule "zseeker_front"]
+	path = zseeker_front
+	url = https://github.com/Georgakopoulos-Soares-lab/zseeker_front.git
+[submodule "zseeker_back"]
+	path = zseeker_back
+	url = https://github.com/Georgakopoulos-Soares-lab/zseeker_back.git

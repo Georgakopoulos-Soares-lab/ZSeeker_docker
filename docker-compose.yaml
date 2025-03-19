@@ -1,0 +1,24 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: .
+      # Use the Dockerfile in the project root that builds both backend and CLI.
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - zseeker-net
+
+  frontend:
+    build: ./zseeker_front
+    ports:
+      - "80:80"
+    networks:
+      - zseeker-net
+    depends_on:
+      - backend
+
+networks:
+  zseeker-net:
+    driver: bridge
