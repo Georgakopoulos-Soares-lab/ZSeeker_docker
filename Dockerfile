@@ -16,10 +16,10 @@ WORKDIR /app
 COPY zseeker_front/ /usr/share/nginx/html
 
 # Stage 3: Final Image (Single container running both services)
-FROM debian:bullseye-slim
-# Install Python 3, pip, nginx, supervisor, and certificates.
+FROM python:3.10-slim
+# Install nginx, supervisor, and necessary build tools and certificates.
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip nginx supervisor ca-certificates && \
+    apt-get install -y nginx supervisor ca-certificates gcc build-essential && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -29,7 +29,7 @@ COPY --from=builder /app/go_back/server /app/server
 
 # Copy the Python CLI package (from your ZSeeker repo) and install it.
 COPY ZSeeker/ /app/ZSeeker/
-RUN pip3 install --upgrade pip && pip3 install -e /app/ZSeeker
+RUN pip install --upgrade pip && pip install -e /app/ZSeeker
 
 # Copy the frontend static files from Stage 2.
 COPY --from=frontend /usr/share/nginx/html /usr/share/nginx/html
