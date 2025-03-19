@@ -1,37 +1,47 @@
 # Stage 1: Build the Go backend
 FROM golang:1.23 as builder
 WORKDIR /app
-
-# Copy Go module files first to cache dependencies
+# Copy Go module files to leverage caching
 COPY zseeker_back/go.mod zseeker_back/go.sum ./go_back/
 WORKDIR /app/go_back
 RUN go mod download
-
-# Copy the rest of the Go backend source code and build the server binary
+# Copy all backend source code and build the server binary
 COPY zseeker_back/ .
 RUN go build -o server server.go
 
-# Stage 2: Create final image with both Go backend and Python CLI
-FROM python:3.10-slim
+# Stage 2: Prepare the Frontend
+FROM nginx:alpine as frontend
+# In this stage we simply copy the static files from the frontend repo
+WORKDIR /app
+COPY zseeker_front/ /usr/share/nginx/html
 
-# Install Python 3 and pip, along with any other required packages
+# Stage 3: Final Image (Single container running both services)
+FROM debian:bullseye-slim
+# Install Python 3, pip, nginx, supervisor, and certificates.
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip ca-certificates && \
+    apt-get install -y python3 python3-pip nginx supervisor ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy the built Go server binary from the builder stage
+# Copy the built Go server binary from Stage 1.
 COPY --from=builder /app/go_back/server /app/server
 
-# Copy the Python CLI package code
+# Copy the Python CLI package (from your ZSeeker repo) and install it.
 COPY ZSeeker/ /app/ZSeeker/
-
-# Install the Python CLI package in editable mode so that its entrypoint is available (assumes setup.py defines a script "ZSeeker")
 RUN pip3 install --upgrade pip && pip3 install -e /app/ZSeeker
 
-# Expose the port used by your Go server
-EXPOSE 8080
+# Copy the frontend static files from Stage 2.
+COPY --from=frontend /usr/share/nginx/html /usr/share/nginx/html
 
-# Run the Go server. It can now call the CLI using the command "ZSeeker" (which should be in /usr/local/bin)
-CMD ["/app/server"]
+# Remove the default nginx configuration if needed.
+RUN rm /etc/nginx/sites-enabled/default
+
+# Copy a custom supervisor configuration that will run both the backend and nginx.
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose ports: 80 for the frontend and 8080 for the backend.
+EXPOSE 80 8080
+
+# Start supervisor in the foreground.
+CMD ["/usr/bin/supervisord", "-n"]
